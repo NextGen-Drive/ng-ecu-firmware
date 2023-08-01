@@ -35,19 +35,37 @@ CRGB adjustBrightness(CRGB color, uint8_t brightness) {
   return color;
 }
 
-template <typename LED_Type>
-class LightStrip {
-  //private:
-  //uint8_t
+class LightStripBase {
+  public:
+    /*
+    * Starts initializing the led strip
+    */
+    virtual void Initialize() = 0;
+};
+
+template<template<uint8_t Data_Pin, EOrder RGB_ORDER>class LED_Type, uint8_t Num_Leds, uint8_t Data_Pin>
+class LightStrip : public LightStripBase {
+  private:
+    CRGB leds[Num_Leds];
 
   public:
-    LightStrip(uint8_t data_pin, uint8_t num_leds) {
-      
+    LightStrip(const char* name) {
+
     }
 
+    /*
+    * Starts initializing the led strip
+    */
     void Initialize() {
-      FastLED.addLeds<LED_Type, DATA_PIN>(leds, NUM_LEDS); 
+      FastLED.addLeds<LED_Type, Data_Pin>(leds, Num_Leds); 
     }
+};
+
+LightStripBase* lights[] = {
+  &LightStrip<WS2811, NUM_LEDS, DATA_PIN>("dash_ring"),
+  &LightStrip<WS2811, NUM_LEDS, DATA_PIN_CHARGING_STATION_LIGHT>("charging_station"),
+  &LightStrip<WS2811, NUM_LEDS_DOOR_FR_SPEAKER, DATA_PIN_DOOR_FR_SPEAKER>("door_fr_speaker"),
+  &LightStrip<WS2811, NUM_LEDS_DOOR_FR_POCKET, DATA_PIN_DOOR_FR_POCKET>("door_fr_pocket"),
 };
 
 class Animation {
