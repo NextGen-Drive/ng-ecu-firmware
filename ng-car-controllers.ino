@@ -13,6 +13,12 @@
 #define MOBILE_CHRGR_LED_DAY_BRIGHTNESS 255
 #define MOBILE_CHRGR_LED_NIGHT_BRIGHTNESS 255
 
+#define DATA_PIN_DOOR_FR_SPEAKER 4
+#define NUM_LEDS_DOOR_FR_SPEAKER 30
+
+#define DATA_PIN_DOOR_FR_POCKET 7
+#define NUM_LEDS_DOOR_FR_POCKET 7
+
 // Communication
 #define RXp2 16
 #define TXp2 17
@@ -20,12 +26,29 @@
 CRGB leds[NUM_LEDS];
 CRGB charging_station_leds[NUM_LEDS];
 CRGB door_fr_leds[NUM_LEDS_DOOR_FR];
+CRGB door_fr_leds_speaker[NUM_LEDS_DOOR_FR_SPEAKER];
+CRGB door_fr_leds_pocket[NUM_LEDS_DOOR_FR_POCKET];
 
 CRGB adjustBrightness(CRGB color, uint8_t brightness) {
   // Scale the brightness of the color using the nscale8_video() function
   color.nscale8_video(brightness);
   return color;
 }
+
+template <typename LED_Type>
+class LightStrip {
+  //private:
+  //uint8_t
+
+  public:
+    LightStrip(uint8_t data_pin, uint8_t num_leds) {
+      
+    }
+
+    void Initialize() {
+      FastLED.addLeds<LED_Type, DATA_PIN>(leds, NUM_LEDS); 
+    }
+};
 
 class Animation {
   protected:
@@ -106,7 +129,7 @@ class StartupAnimation : public Animation {
     fill_solid(leds, NUM_LEDS, CRGB::Black); 
   }
 
-  fill_solid(charging_station_leds, NUM_LEDS, adjustBrightness(CRGB::LightGreen, MOBILE_CHRGR_LED_DAY_BRIGHTNESS)); 
+  fill_solid(charging_station_leds, NUM_LEDS, adjustBrightness(CRGB::LightBlue, MOBILE_CHRGR_LED_DAY_BRIGHTNESS)); 
       }
     }
 
@@ -201,10 +224,12 @@ void setup() {
   Serial.println("Setting up...");
   FastLED.addLeds<WS2811, DATA_PIN>(leds, NUM_LEDS); 
   FastLED.addLeds<WS2811, DATA_PIN_CHARGING_STATION_LIGHT>(charging_station_leds, NUM_LEDS); 
-  FastLED.addLeds<WS2812B, DATA_PIN_DOOR_FR>(door_fr_leds, NUM_LEDS_DOOR_FR); 
+  //FastLED.addLeds<WS2812B, DATA_PIN_DOOR_FR>(door_fr_leds, NUM_LEDS_DOOR_FR); 
+  FastLED.addLeds<WS2811, DATA_PIN_DOOR_FR_SPEAKER>(door_fr_leds_speaker, NUM_LEDS_DOOR_FR_SPEAKER);
+  FastLED.addLeds<WS2812B, DATA_PIN_DOOR_FR_POCKET>(door_fr_leds_pocket, NUM_LEDS_DOOR_FR_POCKET);
 
   FastLED.clear();
-  FastLED.setBrightness(100);
+  FastLED.setBrightness(255);
 
   currentAnimation = new StartupAnimation();
   currentAnimation->startAnimation();
@@ -213,7 +238,8 @@ void setup() {
 void loop() { 
   currentAnimation->tickAnimation();
 
-  fill_solid(door_fr_leds, NUM_LEDS_DOOR_FR, adjustBrightness(CRGB::White, 255));
+  fill_solid(door_fr_leds_speaker, NUM_LEDS_DOOR_FR_SPEAKER, adjustBrightness(CRGB::Blue, 255));
+  fill_solid(door_fr_leds_pocket, NUM_LEDS_DOOR_FR_POCKET, adjustBrightness(CRGB::White, 255));
 
   FastLED.show();
 
