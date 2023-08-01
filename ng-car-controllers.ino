@@ -48,6 +48,8 @@ class StartupAnimation : public Animation {
     unsigned int endBrightnessStageDuration = 1000; // in ms
     LightStripBase* dash_ring;
     LightStripBase* chargingStationLightStrip;
+    LightStripBase* door_fr_leds_speaker;
+    LightStripBase* door_fr_leds_pocket;
 
   public:
     void tickAnimation() override {
@@ -86,11 +88,22 @@ class StartupAnimation : public Animation {
 
         fill_solid(dash_ring->leds, NUM_LEDS, color); 
 
+        // Fade in charging station led
         int chg_brightness = map(elapsedStageTime, 0, endBrightnessStageDuration, 0, MOBILE_CHRGR_LED_DAY_BRIGHTNESS);
 
-        CRGB chg_color = adjustBrightness(CRGB::LightGreen, chg_brightness);
+        CRGB chg_color = adjustBrightness(CRGB::LightBlue, chg_brightness);
 
         fill_solid(chargingStationLightStrip->leds, NUM_LEDS, chg_color); 
+
+        // Fade in circular speaker led
+        int speaker_active_led = map(elapsedStageTime, 0, endBrightnessStageDuration, 0, NUM_LEDS_DOOR_FR_SPEAKER);
+        
+        door_fr_leds_speaker->leds[speaker_active_led] = CRGB::Blue;
+
+        // Fade in door pocket led
+        int pocket_active_led = map(elapsedStageTime, 0, endBrightnessStageDuration, 0, NUM_LEDS_DOOR_FR_POCKET);
+
+        door_fr_leds_pocket->leds[pocket_active_led] = CRGB::White;
 
         lastUpdateTime = millis();
 
@@ -99,19 +112,23 @@ class StartupAnimation : public Animation {
         }
       } else if (stage == 3) {
         CRGB color = CRGB::Red;
-
-  if (IS_DASH_LED_ENABLED) {
-    fill_solid(dash_ring->leds, NUM_LEDS, adjustBrightness(color, 128)); 
-  } else {
-    fill_solid(dash_ring->leds, NUM_LEDS, CRGB::Black); 
-  }
-
-  fill_solid(chargingStationLightStrip->leds, NUM_LEDS, adjustBrightness(CRGB::LightBlue, MOBILE_CHRGR_LED_DAY_BRIGHTNESS)); 
+        
+        if (IS_DASH_LED_ENABLED) {
+          fill_solid(dash_ring->leds, NUM_LEDS, adjustBrightness(color, 128)); 
+        } else {
+          fill_solid(dash_ring->leds, NUM_LEDS, CRGB::Black); 
+        }
+        fill_solid(chargingStationLightStrip->leds, NUM_LEDS, adjustBrightness(CRGB::LightBlue, MOBILE_CHRGR_LED_DAY_BRIGHTNESS)); 
+        fill_solid(door_fr_leds_speaker->leds, NUM_LEDS_DOOR_FR_SPEAKER, adjustBrightness(CRGB::Blue, 255));
+        fill_solid(door_fr_leds_pocket->leds, NUM_LEDS_DOOR_FR_POCKET, adjustBrightness(CRGB::White, 255));
       }
     }
 
     void startAnimation() override {
       dash_ring = findLightStrip(LightStripId::DashRing);
+      chargingStationLightStrip = findLightStrip(LightStripId::ChargingStation);
+      door_fr_leds_pocket = findLightStrip(LightStripId::Door_Fr_Pocket);
+      door_fr_leds_speaker = findLightStrip(LightStripId::Door_Fr_Speaker);
 
       currentLEDPos = NUM_LEDS;
       fill_solid(dash_ring->leds, NUM_LEDS, CRGB::Black);
@@ -228,9 +245,6 @@ void setup() {
 
 void loop() { 
   currentAnimation->tickAnimation();
-
-  fill_solid(door_fr_leds_speaker->leds, NUM_LEDS_DOOR_FR_SPEAKER, adjustBrightness(CRGB::Blue, 255));
-  fill_solid(door_fr_leds_pocket->leds, NUM_LEDS_DOOR_FR_POCKET, adjustBrightness(CRGB::White, 255));
 
   FastLED.show();
 
