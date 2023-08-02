@@ -21,12 +21,16 @@ class LightStrip : public LightStripBase {
 
       FastLED.addLeds<LED_Type, Data_Pin>(leds, Num_Leds);
     }
+
+    uint8_t getNumLeds() {
+      return Num_Leds;
+    }
 };
 
 LightStripBase* lights[] = {
-  //          Chip    Num LEDs  Data Pin
-  &LightStrip<WS2811, NUM_LEDS, DATA_PIN>(LightStripId::DashRing),
-  &LightStrip<WS2811, NUM_LEDS, DATA_PIN_CHARGING_STATION_LIGHT>(LightStripId::ChargingStation),
-  &LightStrip<WS2811, NUM_LEDS_DOOR_FR_SPEAKER, DATA_PIN_DOOR_FR_SPEAKER>(LightStripId::Door_Fr_Speaker),
-  &LightStrip<WS2811, NUM_LEDS_DOOR_FR_POCKET, DATA_PIN_DOOR_FR_POCKET>(LightStripId::Door_Fr_Pocket),
+  //          Chip     Num LEDs  Data Pin
+  &LightStrip<WS2811,  30,       8         >(LightStripId::DashRing),
+  &LightStrip<WS2811,  30,       12        >(LightStripId::ChargingStation),
+  &LightStrip<WS2811,  30,       4         >(LightStripId::Door_Fr_Speaker),
+  &LightStrip<WS2812B, 7,        7         >(LightStripId::Door_Fr_Pocket),
 };
