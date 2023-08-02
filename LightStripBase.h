@@ -1,18 +1,5 @@
 #include <FastLED.h>
-
-enum LightStripId {
-  DashRing,
-  ChargingStation,
-  Door_Fr_Speaker,
-  Door_Fr_Pocket,
-};
-
-const char* lightStripNames[] = {
-  "dash_ring",
-  "charging_station",
-  "door_fr_speaker",
-  "door_fr_pocket"
-};
+#include "Config.h"
 
 class LightStripBase {
   public:
