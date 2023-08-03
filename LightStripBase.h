@@ -20,6 +20,20 @@ class LightStripBase {
     }
 
     virtual uint8_t getNumLeds() = 0;
+
+    /*
+    * Fills the whole strip with the specified color.
+    */
+    void fillSolid(CRGB color) {
+      fill_solid(this->leds, this->getNumLeds(), color); 
+    }
+
+    /*
+    * Blacks out the whole strip.
+    */
+    void fillBlack() {
+      this->fillSolid(CRGB::Black);
+    }
 };
 
 #endif

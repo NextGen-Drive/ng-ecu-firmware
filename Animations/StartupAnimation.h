@@ -48,14 +48,14 @@ class StartupAnimation : public Animation {
 
         CRGB color = adjustBrightness(CRGB::White, brightness);
 
-        fill_solid(dash_ring->leds, dash_ring->getNumLeds(), color); 
+        dash_ring->fillSolid(color);
 
         // Fade in charging station led
         int chg_brightness = map(elapsedStageTime, 0, endBrightnessStageDuration, 0, MOBILE_CHRGR_LED_DAY_BRIGHTNESS);
 
         CRGB chg_color = adjustBrightness(CRGB::LightBlue, chg_brightness);
 
-        fill_solid(chargingStationLightStrip->leds, chargingStationLightStrip->getNumLeds(), chg_color); 
+        chargingStationLightStrip->fillSolid(chg_color); 
 
         // Fade in circular speaker led
         int speaker_active_led = map(elapsedStageTime, 0, endBrightnessStageDuration, 0, door_fr_leds_speaker->getNumLeds());
@@ -76,13 +76,13 @@ class StartupAnimation : public Animation {
         CRGB color = CRGB::Red;
         
         if (IS_DASH_LED_ENABLED) {
-          fill_solid(dash_ring->leds, dash_ring->getNumLeds(), adjustBrightness(color, 128)); 
+          dash_ring->fillSolid(adjustBrightness(color, 128))
         } else {
-          fill_solid(dash_ring->leds, dash_ring->getNumLeds(), CRGB::Black); 
+          dash_ring->fillSolid(CRGB::Black);
         }
-        fill_solid(chargingStationLightStrip->leds, chargingStationLightStrip->getNumLeds(), adjustBrightness(CRGB::LightBlue, MOBILE_CHRGR_LED_DAY_BRIGHTNESS)); 
-        fill_solid(door_fr_leds_speaker->leds, door_fr_leds_speaker->getNumLeds(), adjustBrightness(CRGB::Blue, 255));
-        fill_solid(door_fr_leds_pocket->leds, door_fr_leds_pocket->getNumLeds(), adjustBrightness(CRGB::White, 255));
+        chargingStationLightStrip->fillSolid(adjustBrightness(CRGB::LightBlue, MOBILE_CHRGR_LED_DAY_BRIGHTNESS));
+        door_fr_leds_speaker->fillSolid(adjustBrightness(CRGB::Blue, 255));
+        door_fr_leds_pocket->fillSolid(adjustBrightness(CRGB::White, 255));
       }
     }
 
@@ -93,7 +93,9 @@ class StartupAnimation : public Animation {
       door_fr_leds_speaker = findLightStrip(LightStripId::Door_Fr_Speaker);
 
       currentLEDPos = dash_ring->getNumLeds();
-      fill_solid(dash_ring->leds, dash_ring->getNumLeds(), CRGB::Black);
+      
+      dash_ring->fillBlack();
+
       lastUpdateTime = millis();
     }
 };
