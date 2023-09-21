@@ -8,6 +8,7 @@
 
 #define NG_D_SERVICE_ID "a317a887-d070-48dc-a917-6f812a434fe1"
 #define CURRENT_COLOR_CHARACTERISTIC_ID "fe430623-58ee-4ea9-8b1e-b6e57904048c"
+#define ALLOW_CONNECT_OBD2_CHARACTERISTIC_ID "559AB6B6-A0D0-414A-9F0B-68D58E667749"
 
 BluetoothSerial SerialBT;
 #define ELM_PORT   SerialBT
@@ -39,7 +40,6 @@ void setup() {
   if (!ELM_PORT.connect("VEEPEAK"))
   {
     DEBUG_PORT.println("Couldn't connect to OBD scanner - Phase 1");
-    //while(1);
   }
 
   if (!myELM327.begin(ELM_PORT, false, 2000, ISO_15765_11_BIT_500_KBAUD))
@@ -73,6 +73,14 @@ void setup() {
                                        );
 
   pCharacteristic->setValue("122;133;144;1");
+
+  BLECharacteristic *allowConnectObd2Characteristic = pService->createCharacteristic(
+                                         ALLOW_CONNECT_OBD2_CHARACTERISTIC_ID,
+                                         BLECharacteristic::PROPERTY_READ |
+                                         BLECharacteristic::PROPERTY_WRITE
+                                       );
+  allowConnectObd2Characteristic->setValue(true);                    
+
   pService->start();
   // BLEAdvertising *pAdvertising = pServer->getAdvertising();  // this still is working for backward compatibility
   BLEAdvertising *pAdvertising = BLEDevice::getAdvertising();
@@ -81,7 +89,7 @@ void setup() {
   pAdvertising->setMinPreferred(0x06);  // functions that help with iPhone connections issue
   pAdvertising->setMinPreferred(0x12);
   BLEDevice::startAdvertising();
-  Serial.println("Characteristic defined! Now you can read it in your phone!");
+  Serial.println("Started Bluetooth server");
 }
 
 bool isWaiting = false;
