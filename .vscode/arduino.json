@@ -1,5 +1,0 @@
-{
-    "board": "arduino:avr:uno",
-    "sketch": "ng-car-controllers.ino",
-    "programmer": "arduinoasisp"
-}
