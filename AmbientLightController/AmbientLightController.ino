@@ -101,19 +101,6 @@ class Animation {
     }
 };
 
-CRGB modifyBrightness2(const CRGB &color, uint8_t brightness) {
-  // Calculate scaling factor for each color component
-  float scalingFactor = float(brightness) / 255.0;
-  
-  // Apply the scaling factor to each color component
-  uint8_t modifiedRed = color.r * scalingFactor;
-  uint8_t modifiedGreen = color.g * scalingFactor;
-  uint8_t modifiedBlue = color.b * scalingFactor;
-  
-  // Create a new CRGB struct with the modified color components
-  return CRGB(modifiedRed, modifiedGreen, modifiedBlue);
-}
-
 class NmModeTransitionAnimation : public Animation {
   private:
     unsigned int transitionDuration = 1500;
@@ -142,7 +129,7 @@ class NmModeTransitionAnimation : public Animation {
 
      int strip_brightness = map(elapsedTime, 0, transitionDuration, !IS_NIGHT_MODE ? night_brightness : day_brightness, targetBrightness);
 
-     CRGB adj_color = modifyBrightness2(color, strip_brightness);
+     CRGB adj_color = adjustBrightness(color, strip_brightness);
 
      fill_solid(strip, num_leds, adj_color);
    }
