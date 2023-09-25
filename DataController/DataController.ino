@@ -21,7 +21,7 @@ obd_cmd_states obd_query_state = SEND_COMMAND;
 unsigned long timeSInceLast;
 bool flag = false;
 
-class MyServerCallbacks: public BLEServerCallbacks {
+class BleServerCallbacksHandler: public BLEServerCallbacks {
     void onConnect(BLEServer* pServer) {
       pServer->startAdvertising(); // restart advertising
     };
@@ -64,7 +64,7 @@ void setup() {
 
   BLEDevice::init("NextGenDrive 001 Main ECU Dev");
   BLEServer *pServer = BLEDevice::createServer();
-  pServer->setCallbacks(new MyServerCallbacks());
+  pServer->setCallbacks(new BleServerCallbacksHandler());
   BLEService *pService = pServer->createService(NG_D_SERVICE_ID);
   BLECharacteristic *pCharacteristic = pService->createCharacteristic(
                                          CURRENT_COLOR_CHARACTERISTIC_ID,
