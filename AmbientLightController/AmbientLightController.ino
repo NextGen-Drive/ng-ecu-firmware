@@ -81,23 +81,71 @@ struct ITheme {
 
 struct ChillTheme : ITheme {
   public:
-    CRGB chargingStationColor = CRGB::White;
-    CRGB doorPocketColor = CRGB::White;
-    CRGB doorPocketColorV2 = CRGB::White;
-    CRGB doorSpeakerColor = CRGB::Blue;
-    CRGB lowerDashboardColor = CRGB::Blue;
+    ChillTheme() {
+      chargingStationColor = CRGB::White;
+      doorPocketColor = CRGB::White;
+      doorPocketColorV2 = CRGB::LightBlue;
+      doorSpeakerColor = CRGB::Blue;
+      lowerDashboardColor = CRGB::Blue;
+    }
 };
 
 struct SportTheme : ITheme {
   public:
-    CRGB chargingStationColor = CRGB::Red;
-    CRGB doorPocketColor = CRGB::Red;
-    CRGB doorPocketColorV2 = CRGB::Red;
-    CRGB doorSpeakerColor = CRGB::Red;
-    CRGB lowerDashboardColor = CRGB::Red;
+    SportTheme() {
+      chargingStationColor = CRGB::Red;
+      doorPocketColor = CRGB::Red;
+      doorPocketColorV2 = CRGB::Red;
+      doorSpeakerColor = CRGB::Red;
+      lowerDashboardColor = CRGB::Red;
+    }
 };
 
 static ITheme* CurrentTheme = new SportTheme();
+
+struct SharedAnimationParams {
+  public: 
+    unsigned long elapsedTime; 
+    unsigned long duration;
+    uint8_t num_leds;
+    uint8_t target_brightness;
+    CRGB target_color;
+    SharedAnimationParams(unsigned long elapsedTime, unsigned long duration, uint8_t num_leds, uint8_t target_brightness, CRGB target_color) 
+    : elapsedTime(elapsedTime), duration(duration), num_leds(num_leds), target_brightness(target_brightness), target_color(target_color) {
+    }
+};
+
+struct AnimationManager {
+  public:
+    // Fades the whole strip in one piece (from initial_brightness to target_brightness)
+    static void fadeTo(unsigned long elapsedTime, unsigned long duration, CRGB strip[], uint8_t num_leds, uint8_t initial_brightness, uint8_t target_brightness, CRGB target_color) {
+      int current_brightness = map(elapsedTime, 0, duration, initial_brightness, target_brightness);
+      CRGB current_color = adjustBrightness(target_color, current_brightness);
+      fill_solid(strip, num_leds, current_color); 
+    }
+
+    // Fades in the whole strip in one piece (from 0)
+    static void fadeIn(unsigned long elapsedTime, unsigned long duration, CRGB strip[], uint8_t num_leds, uint8_t target_brightness, CRGB target_color) {
+      int current_brightness = map(elapsedTime, 0, duration, 0, target_brightness);
+      CRGB current_color = adjustBrightness(target_color, current_brightness);
+      fill_solid(strip, num_leds, current_color); 
+    }
+
+    // Fades in the whole strip in one piece (from 0)
+    static void fadeIn(CRGB strip[], SharedAnimationParams p) {
+      fadeIn(p.elapsedTime, p.duration, strip, p.num_leds, p.target_brightness, p.target_color);
+    }
+
+    // Fades in the strip LED by LED
+    static void fadeInSeq(unsigned long elapsedTime, unsigned long duration, CRGB strip[], uint8_t num_leds, uint8_t target_brightness, CRGB target_color) {
+      int speaker_active_led = map(elapsedTime, 0, duration, 0, num_leds);
+      strip[speaker_active_led] = adjustBrightness(target_color, target_brightness);
+    }
+
+    static void fadeInSeq(CRGB strip[], SharedAnimationParams p) {
+      fadeInSeq(p.elapsedTime, p.duration, strip, p.num_leds, p.target_brightness, p.target_color);
+    }
+};
 
 class Animation {
   protected:
@@ -111,7 +159,7 @@ class Animation {
     }
 
     virtual void startAnimation() {
-
+      animationStartTime = millis();
     }
 };
 
@@ -140,16 +188,9 @@ class NmModeTransitionAnimation : public Animation {
 
    void transitionStrip(unsigned long elapsedTime, CRGB strip[], uint8_t num_leds, uint8_t day_brightness, uint8_t night_brightness, CRGB color) {
      uint8_t targetBrightness = IS_NIGHT_MODE ? night_brightness : day_brightness;
+     uint8_t initialBrightness = !IS_NIGHT_MODE ? night_brightness : day_brightness;
 
-     int strip_brightness = map(elapsedTime, 0, transitionDuration, !IS_NIGHT_MODE ? night_brightness : day_brightness, targetBrightness);
-
-     CRGB adj_color = adjustBrightness(color, strip_brightness);
-
-     fill_solid(strip, num_leds, adj_color);
-   }
-
-   void startAnimation() override {
-     animationStartTime = millis();
+     AnimationManager::fadeTo(elapsedTime, transitionDuration, strip, num_leds, initialBrightness, targetBrightness, color);
    }
 };
 
@@ -158,7 +199,7 @@ class StartupAnimation : public Animation {
     unsigned int stage = 0;
     int currentLEDPos = 0;
     unsigned long endBrightnessStageStartTime = 0;
-    unsigned int endBrightnessStageDuration = 1000; // in ms
+    const unsigned int STAGE2_DURATION = 1000; // in ms
 
   public:
     void tickAnimation() override {
@@ -186,63 +227,47 @@ class StartupAnimation : public Animation {
           stage++;
           endBrightnessStageStartTime = millis();
           currentLEDPos = DASH_BOTTOM_NUM_LEDS;
+
+          // Make sure everything was done correctly before as there's no animation for the dash in the next stage
+          CRGB color = adjustBrightness(CurrentTheme->lowerDashboardColor, IS_NIGHT_MODE ? DASH_BOTTOM_LED_NIGHT_BRIGHTNESS : DASH_BOTTOM_LED_DAY_BRIGHTNESS);
+          fill_solid(dash_bottom_leds, DASH_BOTTOM_NUM_LEDS, color); 
         }
       // fade in the charge strip and others
       } else if (stage == 2) {
         unsigned long elapsedStageTime = millis() - endBrightnessStageStartTime;
 
-        CRGB color = adjustBrightness(CurrentTheme->lowerDashboardColor, IS_NIGHT_MODE ? DASH_BOTTOM_LED_NIGHT_BRIGHTNESS : DASH_BOTTOM_LED_DAY_BRIGHTNESS);
+        // Mobile Charging Station
+        AnimationManager::fadeIn(elapsedStageTime, STAGE2_DURATION, charging_station_leds, NUM_LEDS, MOBILE_CHRGR_LED_BRIGHTNESS, CurrentTheme->chargingStationColor);
 
-        fill_solid(dash_bottom_leds, DASH_BOTTOM_NUM_LEDS, color); 
+        // Circular Door Speaker
+        SharedAnimationParams dsParams = SharedAnimationParams(elapsedStageTime, STAGE2_DURATION, NUM_LEDS_DOOR_FL_SPEAKER, IS_NIGHT_MODE ? DOOR_SPEAKER_NIGHT_BRIGHTNESS : DOOR_SPEAKER_DAY_BRIGHTNESS, CurrentTheme->doorSpeakerColor);
+        // Front Left
+        AnimationManager::fadeInSeq(door_fl_leds_speaker, dsParams);
+        // Front Right
+        AnimationManager::fadeInSeq(door_fr_leds_speaker, dsParams);
 
-        int chg_brightness = map(elapsedStageTime, 0, endBrightnessStageDuration, 0, MOBILE_CHRGR_LED_BRIGHTNESS);
-
-        CRGB chg_color = adjustBrightness(CurrentTheme->chargingStationColor, chg_brightness);
-
-        fill_solid(charging_station_leds, NUM_LEDS, chg_color); 
-
-        // Fade in circular speaker led
-        int speaker_active_led = map(elapsedStageTime, 0, endBrightnessStageDuration, 0, NUM_LEDS_DOOR_FR_SPEAKER);
-
-        door_fr_leds_speaker[speaker_active_led] = CurrentTheme->doorSpeakerColor;
-
-        // Fade in door pocket led
-        int pocket_active_led = map(elapsedStageTime, 0, endBrightnessStageDuration, 0, NUM_LEDS_DOOR_FR_POCKET);
-
-        door_fr_leds_pocket[pocket_active_led] = adjustBrightness(CurrentTheme->doorPocketColor, DOOR_POCKET_BRIGHTNESS);
-
-        // Fade in circular speaker led
-        int speaker_active_led2 = map(elapsedStageTime, 0, endBrightnessStageDuration, 0, NUM_LEDS_DOOR_FL_SPEAKER);
-
-        door_fl_leds_speaker[speaker_active_led2] = CurrentTheme->doorSpeakerColor;
-
-        // Fade in door pocket led
-        int pocket_active_led2 = map(elapsedStageTime, 0, endBrightnessStageDuration, 0, NUM_LEDS_DOOR_FL_POCKET);
-
-        door_fl_leds_pocket[pocket_active_led2] = adjustBrightness(CurrentTheme->doorPocketColorV2, DOOR_POCKET_BRIGHTNESS);
+        // Door Pocket
+        // Front Left -> V2
+        SharedAnimationParams dpv2Params = SharedAnimationParams(elapsedStageTime, STAGE2_DURATION, NUM_LEDS_DOOR_FL_POCKET, IS_NIGHT_MODE ? DOOR_POCKET_NIGHT_BRIGHTNESS : DOOR_POCKET_DAY_BRIGHTNESS, CurrentTheme->doorPocketColorV2);
+        AnimationManager::fadeInSeq(door_fl_leds_pocket, dpv2Params);
+        // Front Right -> V1
+        SharedAnimationParams dpv1Params = SharedAnimationParams(elapsedStageTime, STAGE2_DURATION, NUM_LEDS_DOOR_FR_POCKET, IS_NIGHT_MODE ? DOOR_POCKET_NIGHT_BRIGHTNESS : DOOR_POCKET_DAY_BRIGHTNESS, CurrentTheme->doorPocketColor);
+        AnimationManager::fadeInSeq(door_fr_leds_pocket, dpv1Params);
 
         lastUpdateTime = millis();
 
-        if (elapsedStageTime >= endBrightnessStageDuration) {
+        if (elapsedStageTime >= STAGE2_DURATION) {
           stage++;
           isCompleted = true;
         }
       } else if (stage == 3) {
-        CRGB color = CRGB::Red;
+        fill_solid(charging_station_leds, NUM_LEDS, adjustBrightness(CurrentTheme->chargingStationColor, IS_NIGHT_MODE ? MOBILE_CHRGR_LED_NIGHT_BRIGHTNESS : MOBILE_CHRGR_LED_DAY_BRIGHTNESS)); 
+        fill_solid(door_fr_leds_speaker, NUM_LEDS_DOOR_FR_SPEAKER, adjustBrightness(CurrentTheme->doorSpeakerColor, IS_NIGHT_MODE ? DOOR_SPEAKER_NIGHT_BRIGHTNESS : DOOR_SPEAKER_DAY_BRIGHTNESS));
+        fill_solid(door_fr_leds_pocket, NUM_LEDS_DOOR_FR_POCKET, adjustBrightness(CurrentTheme->doorPocketColor, IS_NIGHT_MODE ? DOOR_POCKET_NIGHT_BRIGHTNESS : DOOR_POCKET_DAY_BRIGHTNESS));
+        fill_solid(dash_bottom_leds, DASH_BOTTOM_NUM_LEDS, adjustBrightness(CurrentTheme->lowerDashboardColor, IS_NIGHT_MODE ? DASH_BOTTOM_LED_NIGHT_BRIGHTNESS : DASH_BOTTOM_LED_DAY_BRIGHTNESS));
 
-  if (IS_DASH_LED_ENABLED) {
-    fill_solid(leds, NUM_LEDS, adjustBrightness(color, 128)); 
-  } else {
-    fill_solid(leds, NUM_LEDS, CRGB::Black); 
-  }
-
-  fill_solid(charging_station_leds, NUM_LEDS, adjustBrightness(CurrentTheme->chargingStationColor, IS_NIGHT_MODE ? MOBILE_CHRGR_LED_NIGHT_BRIGHTNESS : MOBILE_CHRGR_LED_DAY_BRIGHTNESS)); 
-  fill_solid(door_fr_leds_speaker, NUM_LEDS_DOOR_FR_SPEAKER, adjustBrightness(CurrentTheme->doorSpeakerColor, IS_NIGHT_MODE ? DOOR_SPEAKER_NIGHT_BRIGHTNESS : DOOR_SPEAKER_DAY_BRIGHTNESS));
-  fill_solid(door_fr_leds_pocket, NUM_LEDS_DOOR_FR_POCKET, adjustBrightness(CurrentTheme->doorPocketColor, IS_NIGHT_MODE ? DOOR_POCKET_NIGHT_BRIGHTNESS : DOOR_POCKET_DAY_BRIGHTNESS));
-  fill_solid(dash_bottom_leds, DASH_BOTTOM_NUM_LEDS, adjustBrightness(CurrentTheme->lowerDashboardColor, IS_NIGHT_MODE ? DASH_BOTTOM_LED_NIGHT_BRIGHTNESS : DASH_BOTTOM_LED_DAY_BRIGHTNESS));
-
-  fill_solid(door_fl_leds_speaker, NUM_LEDS_DOOR_FL_SPEAKER, adjustBrightness(CurrentTheme->doorSpeakerColor, IS_NIGHT_MODE ? DOOR_SPEAKER_NIGHT_BRIGHTNESS : DOOR_SPEAKER_DAY_BRIGHTNESS));
-  fill_solid(door_fl_leds_pocket, NUM_LEDS_DOOR_FL_POCKET, adjustBrightness(CurrentTheme->doorPocketColorV2, IS_NIGHT_MODE ? DOOR_POCKET_NIGHT_BRIGHTNESS : DOOR_POCKET_DAY_BRIGHTNESS));
+        fill_solid(door_fl_leds_speaker, NUM_LEDS_DOOR_FL_SPEAKER, adjustBrightness(CurrentTheme->doorSpeakerColor, IS_NIGHT_MODE ? DOOR_SPEAKER_NIGHT_BRIGHTNESS : DOOR_SPEAKER_DAY_BRIGHTNESS));
+        fill_solid(door_fl_leds_pocket, NUM_LEDS_DOOR_FL_POCKET, adjustBrightness(CurrentTheme->doorPocketColorV2, IS_NIGHT_MODE ? DOOR_POCKET_NIGHT_BRIGHTNESS : DOOR_POCKET_DAY_BRIGHTNESS));
       }
     }
 
@@ -343,10 +368,10 @@ void setup() {
   FastLED.addLeds<WS2811, DATA_PIN>(leds, NUM_LEDS); 
   FastLED.addLeds<WS2811, DATA_PIN_CHARGING_STATION_LIGHT>(charging_station_leds, NUM_LEDS); 
   FastLED.addLeds<WS2811, DATA_PIN_DOOR_FR_SPEAKER>(door_fr_leds_speaker, NUM_LEDS_DOOR_FR_SPEAKER);
-  FastLED.addLeds<WS2812B, DATA_PIN_DOOR_FR_POCKET>(door_fr_leds_pocket, NUM_LEDS_DOOR_FR_POCKET);
-  FastLED.addLeds<WS2812B, DASH_BOTTOM_PIN>(dash_bottom_leds, DASH_BOTTOM_NUM_LEDS);
+  FastLED.addLeds<WS2812B, DATA_PIN_DOOR_FR_POCKET, GRB>(door_fr_leds_pocket, NUM_LEDS_DOOR_FR_POCKET);
+  FastLED.addLeds<WS2812B, DASH_BOTTOM_PIN, GRB>(dash_bottom_leds, DASH_BOTTOM_NUM_LEDS);
   FastLED.addLeds<WS2811, DATA_PIN_DOOR_FL_SPEAKER>(door_fl_leds_speaker, NUM_LEDS_DOOR_FL_SPEAKER);
-  FastLED.addLeds<WS2812B, DATA_PIN_DOOR_FL_POCKET>(door_fl_leds_pocket, NUM_LEDS_DOOR_FL_POCKET);
+  FastLED.addLeds<WS2812B, DATA_PIN_DOOR_FL_POCKET, GRB>(door_fl_leds_pocket, NUM_LEDS_DOOR_FL_POCKET);
 
   FastLED.clear();
   FastLED.setBrightness(255);
