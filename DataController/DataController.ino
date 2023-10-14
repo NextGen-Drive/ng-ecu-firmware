@@ -14,6 +14,9 @@ BluetoothSerial SerialBT;
 #define ELM_PORT   SerialBT
 #define DEBUG_PORT Serial
 
+static int BLE_TRUE = 1;
+static int BLE_FALSE = 0;
+
 ELM327 myELM327;
 
 obd_cmd_states obd_query_state = SEND_COMMAND;
@@ -30,6 +33,23 @@ class BleServerCallbacksHandler: public BLEServerCallbacks {
       pServer->startAdvertising(); // restart advertising
     }
 };
+
+void setupCharacteristics(BLEService *service) {
+  BLECharacteristic *pCharacteristic = service->createCharacteristic(
+                                         CURRENT_COLOR_CHARACTERISTIC_ID,
+                                         BLECharacteristic::PROPERTY_READ |
+                                         BLECharacteristic::PROPERTY_WRITE
+                                       );
+
+  pCharacteristic->setValue("122;133;144;1");
+
+  BLECharacteristic *allowConnectObd2Characteristic = service->createCharacteristic(
+                                         ALLOW_CONNECT_OBD2_CHARACTERISTIC_ID,
+                                         BLECharacteristic::PROPERTY_READ |
+                                         BLECharacteristic::PROPERTY_WRITE
+                                       );
+  allowConnectObd2Characteristic->setValue(BLE_TRUE); 
+}
 
 void setup() {
   Wire.begin(8);
@@ -66,20 +86,8 @@ void setup() {
   BLEServer *pServer = BLEDevice::createServer();
   pServer->setCallbacks(new BleServerCallbacksHandler());
   BLEService *pService = pServer->createService(NG_D_SERVICE_ID);
-  BLECharacteristic *pCharacteristic = pService->createCharacteristic(
-                                         CURRENT_COLOR_CHARACTERISTIC_ID,
-                                         BLECharacteristic::PROPERTY_READ |
-                                         BLECharacteristic::PROPERTY_WRITE
-                                       );
-
-  pCharacteristic->setValue("122;133;144;1");
-
-  BLECharacteristic *allowConnectObd2Characteristic = pService->createCharacteristic(
-                                         ALLOW_CONNECT_OBD2_CHARACTERISTIC_ID,
-                                         BLECharacteristic::PROPERTY_READ |
-                                         BLECharacteristic::PROPERTY_WRITE
-                                       );
-  allowConnectObd2Characteristic->setValue(true);                    
+                     
+  setupCharacteristics(pService);
 
   pService->start();
   // BLEAdvertising *pAdvertising = pServer->getAdvertising();  // this still is working for backward compatibility
@@ -140,14 +148,34 @@ void loop() {
       myELM327.printError();
 }
 
-void onRequest() {
-  if (lightsFlag != '0') {
-    Serial.println("Should activate night mode");
-    Wire.write("NM_A");
+void setBit(byte &targetByte, int position, bool bitValue) {
+  if (position >= 0 && position <= 7) {
+    if (bitValue) {
+      targetByte |= (1 << position); // Set the bit to 1
+    } else {
+      targetByte &= ~(1 << position); // Set the bit to 0
+    }
+    Serial.print("New value: 0b");
+    Serial.println(targetByte, BIN);
   } else {
-    Serial.println("Should deactivate night mode");
-    Wire.write("NM_D");
+    Serial.println("Invalid bit position.");
   }
+}
+
+void onRequest() {
+  byte data;
+  /*
+  MESSAGE SPECIFICATION
+  First Bit - Night Mode Active?
+  */
+
+  if (lightsFlag != '0') {
+    setBit(data, 0, true);
+  } else {
+    setBit(data, 0, false);
+  }
+
+  Wire.write(data);
 }
 
 char** splitString(const char* inputString, int& numSubstrings) {
