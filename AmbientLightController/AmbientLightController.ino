@@ -55,6 +55,8 @@ const int DOOR_POCKET_BRIGHTNESS = IS_NIGHT_MODE ? DOOR_POCKET_NIGHT_BRIGHTNESS 
 #define RXp2 16
 #define TXp2 17
 
+#define EXPECTED_COMM_BYTES 1
+
 CRGB leds[NUM_LEDS];
 CRGB charging_station_leds[NUM_LEDS];
 CRGB door_fr_leds[NUM_LEDS_DOOR_FR];
@@ -101,7 +103,7 @@ struct SportTheme : ITheme {
     }
 };
 
-static ITheme* CurrentTheme = new SportTheme();
+static ITheme* CurrentTheme = new ChillTheme();
 
 struct SharedAnimationParams {
   public: 
@@ -380,27 +382,36 @@ void setup() {
   currentAnimation->startAnimation();
 }
 
+bool getBit(uint8_t targetByte, int position) {
+  if (position >= 0 && position <= 7) {
+    return (targetByte >> position) & 0x01; // Get the bit at the specified position
+  } else {
+    Serial.println("Invalid bit position.");
+    return false; // Return a default value
+  }
+}
+
 void loop() { 
   currentAnimation->tickAnimation();
 
   FastLED.show();
 
-  Wire.requestFrom(8, 4); 
+  Wire.requestFrom(8, EXPECTED_COMM_BYTES); 
 
   if (Wire.available()) {
-    String data = "";
-    while (Wire.available()) {
-      data += (char)Wire.read();
-    }
+    uint8_t buffer;
+    Wire.readBytes(&buffer, EXPECTED_COMM_BYTES);
 
-    if (data == "NM_A") {
+    bool isNightMode = getBit(buffer, 0);
+
+    if (isNightMode) {
       if (!currentAnimation->isCompleted || IS_NIGHT_MODE) return;
       Serial.println("Starting night mode animation");
       delete currentAnimation;
       IS_NIGHT_MODE = true;
       currentAnimation = new NmModeTransitionAnimation();
       currentAnimation->startAnimation();
-    } else if (data == "NM_D") {
+    } else {
       if (!currentAnimation->isCompleted || !IS_NIGHT_MODE) return;
       Serial.println("Starting day mode animation");
       IS_NIGHT_MODE = false;
