@@ -1,6 +1,10 @@
 #include <FastLED.h>
 #include <Wire.h>
 
+#include "Log.hpp"
+
+#include "animations/Animation.hpp"
+
 #include "themes/ITheme.hpp"
 #include "themes/ChillTheme.hpp"
 #include "themes/SportTheme.hpp"
@@ -9,15 +13,16 @@
 
 bool IS_NIGHT_MODE = true;
 static ITheme* CurrentTheme = new ChillTheme();
+static Animation* currentAnimation;
 
 #include "configs/LedConfig.hpp"
 const int MOBILE_CHRGR_LED_BRIGHTNESS = IS_NIGHT_MODE ? MOBILE_CHRGR_LED_NIGHT_BRIGHTNESS : MOBILE_CHRGR_LED_DAY_BRIGHTNESS;
 
 #include "helper/AnimationHelper.hpp"
 
-#include "animations/Animation.hpp"
 #include "animations/StartupAnimation.hpp"
-#include "animations/NmModeTransitionAnimation.hpp"
+
+#include "events/NightModeChangedEvent.hpp"
 
 #define DATA_PIN 8
 #define DATA_PIN_CHARGING_STATION_LIGHT 12
@@ -35,14 +40,14 @@ const int DOOR_POCKET_BRIGHTNESS = IS_NIGHT_MODE ? DOOR_POCKET_NIGHT_BRIGHTNESS 
 
 #define EXPECTED_COMM_BYTES 1
 
-static Animation* currentAnimation;
 static unsigned long previousTime = 0;
 
 void setup() { 
-  Serial.begin(115200);
+  Log::init();
+  Log::println("Starting setup");
+
   Wire.begin(); // Initialize I2C communication
   
-  Serial.println("Setting up...");
   FastLED.addLeds<WS2811, DATA_PIN>(leds, NUM_LEDS); 
   FastLED.addLeds<WS2811, DATA_PIN_CHARGING_STATION_LIGHT>(charging_station_leds, NUM_LEDS); 
   FastLED.addLeds<WS2811, DATA_PIN_DOOR_FR_SPEAKER>(door_fr_leds_speaker, NUM_LEDS_DOOR_FR_SPEAKER);
@@ -56,13 +61,15 @@ void setup() {
 
   currentAnimation = new StartupAnimation();
   currentAnimation->startAnimation();
+
+  Log::println("Finished setup");
 }
 
 bool getBit(uint8_t targetByte, int position) {
   if (position >= 0 && position <= 7) {
     return (targetByte >> position) & 0x01; // Get the bit at the specified position
   } else {
-    Serial.println("Invalid bit position.");
+    Log::error("Invalid bit position.");
     return false; // Return a default value
   }
 }
@@ -80,21 +87,7 @@ void loop() {
 
     bool isNightMode = getBit(buffer, 0);
 
-    if (isNightMode) {
-      if (!currentAnimation->isCompleted || IS_NIGHT_MODE) return;
-      Serial.println("Starting night mode animation");
-      delete currentAnimation;
-      IS_NIGHT_MODE = true;
-      currentAnimation = new NmModeTransitionAnimation();
-      currentAnimation->startAnimation();
-    } else {
-      if (!currentAnimation->isCompleted || !IS_NIGHT_MODE) return;
-      Serial.println("Starting day mode animation");
-      IS_NIGHT_MODE = false;
-      delete currentAnimation;
-      currentAnimation = new NmModeTransitionAnimation();
-      currentAnimation->startAnimation();
-    }
+    NightModeChangedEvent::handle(isNightMode);
   }
 
   /*while (Wire.available()) {
