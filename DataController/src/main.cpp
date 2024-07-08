@@ -51,102 +51,10 @@ void setupCharacteristics(BLEService *service) {
   allowConnectObd2Characteristic->setValue(BLE_TRUE); 
 }
 
-void setup() {
-  Wire.begin(8);
-  Wire.onRequest(onRequest);
-  DEBUG_PORT.begin(115200);
-  ELM_PORT.begin("NG_CAN_MASTER", true);
-
-  if (!ELM_PORT.connect("VEEPEAK"))
-  {
-    DEBUG_PORT.println("Couldn't connect to OBD scanner - Phase 1");
-  }
-
-  if (!myELM327.begin(ELM_PORT, false, 2000, ISO_15765_11_BIT_500_KBAUD))
-  {
-    Serial.println("Couldn't connect to OBD scanner - Phase 2");
-    while (1);
-  }
-
-  Serial.println("Connected to ELM327");
-
-  // Fix: Not getting data for some commands which might take a bit longer (10 seconds might be abit excessive though lol)
-  myELM327.timeout_ms = 10000;
-
-  // Connect to IGMP
-  int8_t setHeaderResult = myELM327.sendCommand_Blocking("AT SH 770");
-
-  if (setHeaderResult != ELM_SUCCESS) {
-    Serial.println("Something went wrong while trying to set the header");
-  }
-
-  timeSInceLast = millis();
-
-  BLEDevice::init("NextGenDrive 001 Main ECU Dev");
-  BLEServer *pServer = BLEDevice::createServer();
-  pServer->setCallbacks(new BleServerCallbacksHandler());
-  BLEService *pService = pServer->createService(NG_D_SERVICE_ID);
-                     
-  setupCharacteristics(pService);
-
-  pService->start();
-  // BLEAdvertising *pAdvertising = pServer->getAdvertising();  // this still is working for backward compatibility
-  BLEAdvertising *pAdvertising = BLEDevice::getAdvertising();
-  pAdvertising->addServiceUUID(NG_D_SERVICE_ID);
-  pAdvertising->setScanResponse(true);
-  pAdvertising->setMinPreferred(0x06);  // functions that help with iPhone connections issue
-  pAdvertising->setMinPreferred(0x12);
-  BLEDevice::startAdvertising();
-  Serial.println("Started Bluetooth server");
-}
-
 bool isWaiting = false;
 unsigned long timeSinceLastCheck = 0;
 
 char lightsFlag;
-
-void loop() {
-  /*if (timeSInceLast + 10000 < millis()) {
-    timeSInceLast = millis();
-    lightsFlag = flag ? '4' : '0';
-    flag = !flag;
-  }*/
-
-  if (!isWaiting) {
-    // Wait 1s for next request
-    if (millis() - timeSinceLastCheck >= 1000) {
-      myELM327.sendCommand("22 BC 03");
-      isWaiting = true;
-    }
-    return;
-  }
-
-  myELM327.get_response();
-
-		if (myELM327.nb_rx_state == ELM_SUCCESS)
-		{
-      timeSinceLastCheck = millis();
-			//nb_query_state = SEND_COMMAND; // Reset the query state machine for next command
-			
-			myELM327.findResponse();
-
-      int numSubstrings;
-
-      char** result = splitString(myELM327.payload, numSubstrings);
-
-      lightsFlag = String(result[2]).charAt(7);
-
-      Serial.println(lightsFlag);
-
-      /*for (int i = 0; i < numSubstrings; ++i) {
-        printf("%s\n", result[i]);
-    }*/
-
-      isWaiting = false;
-		}
-		else if (myELM327.nb_rx_state != ELM_GETTING_MSG)
-      myELM327.printError();
-}
 
 void setBit(byte &targetByte, int position, bool bitValue) {
   if (position >= 0 && position <= 7) {
@@ -218,4 +126,96 @@ char** splitString(const char* inputString, int& numSubstrings) {
     strcpy(substrings[substringIndex], start);
 
     return substrings;
+}
+
+void setup() {
+  Wire.begin(8);
+  Wire.onRequest(onRequest);
+  DEBUG_PORT.begin(115200);
+  ELM_PORT.begin("NG_CAN_MASTER", true);
+
+  if (!ELM_PORT.connect("VEEPEAK"))
+  {
+    DEBUG_PORT.println("Couldn't connect to OBD scanner - Phase 1");
+  }
+
+  if (!myELM327.begin(ELM_PORT, false, 2000, ISO_15765_11_BIT_500_KBAUD))
+  {
+    Serial.println("Couldn't connect to OBD scanner - Phase 2");
+    while (1);
+  }
+
+  Serial.println("Connected to ELM327");
+
+  // Fix: Not getting data for some commands which might take a bit longer (10 seconds might be abit excessive though lol)
+  myELM327.timeout_ms = 10000;
+
+  // Connect to IGMP
+  int8_t setHeaderResult = myELM327.sendCommand_Blocking("AT SH 770");
+
+  if (setHeaderResult != ELM_SUCCESS) {
+    Serial.println("Something went wrong while trying to set the header");
+  }
+
+  timeSInceLast = millis();
+
+  BLEDevice::init("NextGenDrive 001 Main ECU Dev");
+  BLEServer *pServer = BLEDevice::createServer();
+  pServer->setCallbacks(new BleServerCallbacksHandler());
+  BLEService *pService = pServer->createService(NG_D_SERVICE_ID);
+                     
+  setupCharacteristics(pService);
+
+  pService->start();
+  // BLEAdvertising *pAdvertising = pServer->getAdvertising();  // this still is working for backward compatibility
+  BLEAdvertising *pAdvertising = BLEDevice::getAdvertising();
+  pAdvertising->addServiceUUID(NG_D_SERVICE_ID);
+  pAdvertising->setScanResponse(true);
+  pAdvertising->setMinPreferred(0x06);  // functions that help with iPhone connections issue
+  pAdvertising->setMinPreferred(0x12);
+  BLEDevice::startAdvertising();
+  Serial.println("Started Bluetooth server");
+}
+
+void loop() {
+  /*if (timeSInceLast + 10000 < millis()) {
+    timeSInceLast = millis();
+    lightsFlag = flag ? '4' : '0';
+    flag = !flag;
+  }*/
+
+  if (!isWaiting) {
+    // Wait 1s for next request
+    if (millis() - timeSinceLastCheck >= 1000) {
+      myELM327.sendCommand("22 BC 03");
+      isWaiting = true;
+    }
+    return;
+  }
+
+  myELM327.get_response();
+
+		if (myELM327.nb_rx_state == ELM_SUCCESS)
+		{
+      timeSinceLastCheck = millis();
+			//nb_query_state = SEND_COMMAND; // Reset the query state machine for next command
+			
+			myELM327.findResponse();
+
+      int numSubstrings;
+
+      char** result = splitString(myELM327.payload, numSubstrings);
+
+      lightsFlag = String(result[2]).charAt(7);
+
+      Serial.println(lightsFlag);
+
+      /*for (int i = 0; i < numSubstrings; ++i) {
+        printf("%s\n", result[i]);
+    }*/
+
+      isWaiting = false;
+		}
+		else if (myELM327.nb_rx_state != ELM_GETTING_MSG)
+      myELM327.printError();
 }
