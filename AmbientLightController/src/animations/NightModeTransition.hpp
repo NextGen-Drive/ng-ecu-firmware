@@ -1,4 +1,4 @@
-class NmModeTransitionAnimation : public Animation {
+class NightModeTransition : public Animation {
   private:
     unsigned int transitionDuration = 1500;
 
