@@ -1,3 +1,9 @@
+#pragma once
+
+// Different naming convention for convinience
+/* 
+Interface for logging operations
+ */
 struct Log
 {
 public:
@@ -14,7 +20,7 @@ public:
         Serial.println(msg);
     }
 
-    static error(String msg) 
+    static void error(String msg) 
     {
         println("ERROR: " + msg);
     }

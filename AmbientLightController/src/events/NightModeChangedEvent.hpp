@@ -1,4 +1,7 @@
+#pragma once
+
 #include "../animations/NightModeTransition.hpp"
+#include "managers/LedManager.hpp"
 
 struct NightModeChangedEvent
 {
@@ -6,23 +9,25 @@ struct NightModeChangedEvent
     {
         if (newValue)
         {
-            if (!currentAnimation->isCompleted || IS_NIGHT_MODE)
+            if (!LedManager::currentAnimation->isCompleted || LedManager::IS_NIGHT_MODE)
                 return;
+
             Log::println("Starting night mode animation");
-            delete currentAnimation;
-            IS_NIGHT_MODE = true;
-            currentAnimation = new NightModeTransition();
-            currentAnimation->startAnimation();
+            delete LedManager::currentAnimation;
+            LedManager::IS_NIGHT_MODE = true;
+            LedManager::currentAnimation = new NightModeTransition();
+            LedManager::currentAnimation->startAnimation();
         }
         else
         {
-            if (!currentAnimation->isCompleted || !IS_NIGHT_MODE)
+            if (!LedManager::currentAnimation->isCompleted || !LedManager::IS_NIGHT_MODE)
                 return;
+
             Log::println("Starting day mode animation");
-            IS_NIGHT_MODE = false;
-            delete currentAnimation;
-            currentAnimation = new NightModeTransition();
-            currentAnimation->startAnimation();
+            LedManager::IS_NIGHT_MODE = false;
+            delete LedManager::currentAnimation;
+            LedManager::currentAnimation = new NightModeTransition();
+            LedManager::currentAnimation->startAnimation();
         }
     }
 };

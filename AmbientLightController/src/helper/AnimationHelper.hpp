@@ -1,3 +1,7 @@
+#pragma once
+
+#include "helper.hpp"
+
 struct SharedAnimationParams {
   public: 
     unsigned long elapsedTime; 

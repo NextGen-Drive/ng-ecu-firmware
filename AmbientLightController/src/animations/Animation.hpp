@@ -1,3 +1,5 @@
+#pragma once
+
 class Animation {
   protected:
     unsigned long animationStartTime = 0;
@@ -5,6 +7,11 @@ class Animation {
 
   public:
     bool isCompleted = false;
+
+    virtual ~Animation(){
+
+    }
+
     virtual void tickAnimation() {
 
     }

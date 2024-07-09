@@ -1,3 +1,5 @@
+#pragma once
+
 #define NUM_LEDS 30
 #define NUM_LEDS_DOOR_FR 7
 
