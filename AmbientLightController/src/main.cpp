@@ -3,6 +3,7 @@
 #include "managers/LogManager.hpp"
 #include "managers/I2CManager.hpp"
 #include "managers/LedManager.hpp"
+#include "managers/LedRegistry.hpp"
 
 #include "animations/Animation.hpp"
 
@@ -24,6 +25,7 @@ void setup() {
   Log::init();
   Log::println("Starting setup");
 
+  LedRegistry::init();
   LedManager::init();
   I2CManager::init();
 
