@@ -11,7 +11,7 @@
 #define ALLOW_CONNECT_OBD2_CHARACTERISTIC_ID "559AB6B6-A0D0-414A-9F0B-68D58E667749"
 
 BluetoothSerial SerialBT;
-#define ELM_PORT   SerialBT
+#define ELM_PORT SerialBT
 #define DEBUG_PORT Serial
 
 static int BLE_TRUE = 1;
@@ -19,36 +19,36 @@ static int BLE_FALSE = 0;
 
 ELM327 myELM327;
 
-obd_cmd_states obd_query_state = SEND_COMMAND;
-
 unsigned long timeSInceLast;
 bool flag = false;
 
-class BleServerCallbacksHandler: public BLEServerCallbacks {
-    void onConnect(BLEServer* pServer) {
-      pServer->startAdvertising(); // restart advertising
-    };
+class BleServerCallbacksHandler : public BLEServerCallbacks
+{
+  void onConnect(BLEServer *pServer)
+  {
+    pServer->startAdvertising();
+  };
 
-    void onDisconnect(BLEServer* pServer) {
-      pServer->startAdvertising(); // restart advertising
-    }
+  void onDisconnect(BLEServer *pServer)
+  {
+    pServer->startAdvertising();
+  }
 };
 
-void setupCharacteristics(BLEService *service) {
+void setupCharacteristics(BLEService *service)
+{
   BLECharacteristic *pCharacteristic = service->createCharacteristic(
-                                         CURRENT_COLOR_CHARACTERISTIC_ID,
-                                         BLECharacteristic::PROPERTY_READ |
-                                         BLECharacteristic::PROPERTY_WRITE
-                                       );
+      CURRENT_COLOR_CHARACTERISTIC_ID,
+      BLECharacteristic::PROPERTY_READ |
+          BLECharacteristic::PROPERTY_WRITE);
 
   pCharacteristic->setValue("122;133;144;1");
 
   BLECharacteristic *allowConnectObd2Characteristic = service->createCharacteristic(
-                                         ALLOW_CONNECT_OBD2_CHARACTERISTIC_ID,
-                                         BLECharacteristic::PROPERTY_READ |
-                                         BLECharacteristic::PROPERTY_WRITE
-                                       );
-  allowConnectObd2Characteristic->setValue(BLE_TRUE); 
+      ALLOW_CONNECT_OBD2_CHARACTERISTIC_ID,
+      BLECharacteristic::PROPERTY_READ |
+          BLECharacteristic::PROPERTY_WRITE);
+  allowConnectObd2Characteristic->setValue(BLE_TRUE);
 }
 
 bool isWaiting = false;
@@ -56,79 +56,97 @@ unsigned long timeSinceLastCheck = 0;
 
 char lightsFlag;
 
-void setBit(byte &targetByte, int position, bool bitValue) {
-  if (position >= 0 && position <= 7) {
-    if (bitValue) {
-      targetByte |= (1 << position); // Set the bit to 1
-    } else {
-      targetByte &= ~(1 << position); // Set the bit to 0
-    }
-    Serial.print("New value: 0b");
-    Serial.println(targetByte, BIN);
-  } else {
+void setBit(byte &targetByte, int position, bool bitValue)
+{
+  if (position < 0 || position > 7)
+  {
     Serial.println("Invalid bit position.");
+    return;
   }
+
+  if (bitValue)
+  {
+    // Set the bit to 1
+    targetByte |= (1 << position);
+  }
+  else
+  {
+    // Set the bit to 0
+    targetByte &= ~(1 << position);
+  }
+  Serial.print("New value: 0b");
+  Serial.println(targetByte, BIN);
 }
 
-void onRequest() {
+void onRequest()
+{
   byte data;
   /*
-  MESSAGE SPECIFICATION
-  First Bit - Night Mode Active?
+    MESSAGE SPECIFICATION
+    First Bit - Night Mode Active?
   */
 
-  if (lightsFlag != '0') {
+  if (lightsFlag != '0')
+  {
     setBit(data, 0, true);
-  } else {
+  }
+  else
+  {
     setBit(data, 0, false);
   }
 
   Wire.write(data);
 }
 
-char** splitString(const char* inputString, int& numSubstrings) {
-    // Count the number of colons in the input string
-    numSubstrings = 1;  // Start with 1 substring, as we're splitting at least once
-    for (const char* ptr = inputString; *ptr; ++ptr) {
-        if (*ptr == ':') {
-            ++numSubstrings;
-        }
+char **splitString(const char *inputString, int &numSubstrings)
+{
+  // Count the number of colons in the input string
+  numSubstrings = 1; // Start with 1 substring, as we're splitting at least once
+  for (const char *ptr = inputString; *ptr; ++ptr)
+  {
+    if (*ptr == ':')
+    {
+      ++numSubstrings;
     }
+  }
 
-    // Allocate memory for the array of pointers
-    char** substrings = new char*[numSubstrings];
+  // Allocate memory for the array of pointers
+  char **substrings = new char *[numSubstrings];
 
-    // Iterate through the input string and split at colons
-    const char* start = inputString;
-    int substringIndex = 0;
-    for (const char* ptr = inputString; *ptr; ++ptr) {
-        if (*ptr == ':') {
-            // Calculate the length of the current substring
-            int substringLength = ptr - start + 1;
+  // Iterate through the input string and split at colons
+  const char *start = inputString;
+  int substringIndex = 0;
+  for (const char *ptr = inputString; *ptr; ++ptr)
+  {
+    if (*ptr == ':')
+    {
+      // Calculate the length of the current substring
+      int substringLength = ptr - start + 1;
 
-            // Allocate memory for the substring
-            substrings[substringIndex] = new char[substringLength];
+      // Allocate memory for the substring
+      substrings[substringIndex] = new char[substringLength];
 
-            // Copy the substring to the newly allocated memory
-            strncpy(substrings[substringIndex], start, substringLength - 1);
-            substrings[substringIndex][substringLength - 1] = '\0';
+      // Copy the substring to the newly allocated memory
+      strncpy(substrings[substringIndex], start, substringLength - 1);
+      substrings[substringIndex][substringLength - 1] = '\0';
 
-            // Move the start pointer to the next character
-            start = ptr + 1;
+      // Move the start pointer to the next character
+      start = ptr + 1;
 
-            ++substringIndex;
-        }
+      ++substringIndex;
     }
+  }
 
-    // Handle the last substring
-    int lastSubstringLength = strlen(start) + 1;
-    substrings[substringIndex] = new char[lastSubstringLength];
-    strcpy(substrings[substringIndex], start);
+  // Handle the last substring
+  int lastSubstringLength = strlen(start) + 1;
+  substrings[substringIndex] = new char[lastSubstringLength];
+  strcpy(substrings[substringIndex], start);
 
-    return substrings;
+  return substrings;
 }
 
-void setup() {
+void setup()
+{
   Wire.begin(8);
   Wire.onRequest(onRequest);
   DEBUG_PORT.begin(115200);
@@ -142,7 +160,8 @@ void setup() {
   if (!myELM327.begin(ELM_PORT, false, 2000, ISO_15765_11_BIT_500_KBAUD))
   {
     Serial.println("Couldn't connect to OBD scanner - Phase 2");
-    while (1);
+    while (1)
+      ;
   }
 
   Serial.println("Connected to ELM327");
@@ -153,7 +172,8 @@ void setup() {
   // Connect to IGMP
   int8_t setHeaderResult = myELM327.sendCommand_Blocking("AT SH 770");
 
-  if (setHeaderResult != ELM_SUCCESS) {
+  if (setHeaderResult != ELM_SUCCESS)
+  {
     Serial.println("Something went wrong while trying to set the header");
   }
 
@@ -163,7 +183,7 @@ void setup() {
   BLEServer *pServer = BLEDevice::createServer();
   pServer->setCallbacks(new BleServerCallbacksHandler());
   BLEService *pService = pServer->createService(NG_D_SERVICE_ID);
-                     
+
   setupCharacteristics(pService);
 
   pService->start();
@@ -171,22 +191,25 @@ void setup() {
   BLEAdvertising *pAdvertising = BLEDevice::getAdvertising();
   pAdvertising->addServiceUUID(NG_D_SERVICE_ID);
   pAdvertising->setScanResponse(true);
-  pAdvertising->setMinPreferred(0x06);  // functions that help with iPhone connections issue
+  pAdvertising->setMinPreferred(0x06); // functions that help with iPhone connections issue
   pAdvertising->setMinPreferred(0x12);
   BLEDevice::startAdvertising();
   Serial.println("Started Bluetooth server");
 }
 
-void loop() {
+void loop()
+{
   /*if (timeSInceLast + 10000 < millis()) {
     timeSInceLast = millis();
     lightsFlag = flag ? '4' : '0';
     flag = !flag;
   }*/
 
-  if (!isWaiting) {
+  if (!isWaiting)
+  {
     // Wait 1s for next request
-    if (millis() - timeSinceLastCheck >= 1000) {
+    if (millis() - timeSinceLastCheck >= 1000)
+    {
       myELM327.sendCommand("22 BC 03");
       isWaiting = true;
     }
@@ -195,27 +218,26 @@ void loop() {
 
   myELM327.get_response();
 
-		if (myELM327.nb_rx_state == ELM_SUCCESS)
-		{
-      timeSinceLastCheck = millis();
-			//nb_query_state = SEND_COMMAND; // Reset the query state machine for next command
-			
-			myELM327.findResponse();
+  if (myELM327.nb_rx_state == ELM_SUCCESS)
+  {
+    timeSinceLastCheck = millis();
 
-      int numSubstrings;
+    myELM327.findResponse();
 
-      char** result = splitString(myELM327.payload, numSubstrings);
+    int numSubstrings;
 
-      lightsFlag = String(result[2]).charAt(7);
+    char **result = splitString(myELM327.payload, numSubstrings);
 
-      Serial.println(lightsFlag);
+    lightsFlag = String(result[2]).charAt(7);
 
-      /*for (int i = 0; i < numSubstrings; ++i) {
-        printf("%s\n", result[i]);
-    }*/
+    Serial.println(lightsFlag);
 
-      isWaiting = false;
-		}
-		else if (myELM327.nb_rx_state != ELM_GETTING_MSG)
-      myELM327.printError();
+    /*for (int i = 0; i < numSubstrings; ++i) {
+      printf("%s\n", result[i]);
+  }*/
+
+    isWaiting = false;
+  }
+  else if (myELM327.nb_rx_state != ELM_GETTING_MSG)
+    myELM327.printError();
 }
