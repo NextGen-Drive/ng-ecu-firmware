@@ -2,13 +2,15 @@
 
 #include "managers/LedManager.hpp"
 
+constexpr uint16_t STAGE2_DURATION = 1000;  // in ms
+
 class StartupAnimation : public Animation
 {
 private:
-  unsigned int stage = 0;
-  int currentLEDPos = 0;
+  uint8_t stage = 0;
+  uint8_t currentLEDPos = 0;
   unsigned long endBrightnessStageStartTime = 0;
-  const unsigned int STAGE2_DURATION = 1000; // in ms
+  SharedAnimationParams dpCommon{0, 0, 0, 0, CRGB::Black};
 
 public:
   void startAnimation() override
@@ -25,13 +27,13 @@ public:
   
   void tickAnimation() override
   {
-    unsigned long currentTime = millis();
+    unsigned long now = millis();
 
     ITheme *currentTheme = LedManager::CurrentTheme;
     bool isNightMode = LedManager::IS_NIGHT_MODE;
 
     // Dot animation from left to right
-    if (stage == 0 && currentTime - lastUpdateTime >= 7)
+    if (stage == 0 && now - lastUpdateTime >= 7)
     {
       if (currentLEDPos != DASH_BOTTOM_NUM_LEDS)
       {
@@ -39,7 +41,7 @@ public:
       }
       dash_bottom_leds[currentLEDPos] = adjustBrightness(CRGB::White, isNightMode ? DASH_BOTTOM_LED_NIGHT_BRIGHTNESS : DASH_BOTTOM_LED_DAY_BRIGHTNESS);
       currentLEDPos--;
-      lastUpdateTime = millis();
+      lastUpdateTime = now;
 
       if (currentLEDPos == -1)
       {
@@ -47,47 +49,56 @@ public:
       }
       // Fade in from right to left
     }
-    else if (stage == 1 && currentTime - lastUpdateTime >= 7)
+    else if (stage == 1 && now - lastUpdateTime >= 7)
     {
       dash_bottom_leds[currentLEDPos] = adjustBrightness(currentTheme->lowerDashboardColor, isNightMode ? DASH_BOTTOM_LED_NIGHT_BRIGHTNESS : DASH_BOTTOM_LED_DAY_BRIGHTNESS);
       currentLEDPos++;
-      lastUpdateTime = millis();
+      lastUpdateTime = now;
 
       if (currentLEDPos == DASH_BOTTOM_NUM_LEDS + 1)
       {
         stage++;
-        endBrightnessStageStartTime = millis();
+        endBrightnessStageStartTime = now;
         currentLEDPos = DASH_BOTTOM_NUM_LEDS;
 
         // Make sure everything was done correctly before as there's no animation for the dash in the next stage
-        CRGB color = adjustBrightness(currentTheme->lowerDashboardColor, isNightMode ? DASH_BOTTOM_LED_NIGHT_BRIGHTNESS : DASH_BOTTOM_LED_DAY_BRIGHTNESS);
+        const CRGB color = adjustBrightness(currentTheme->lowerDashboardColor, isNightMode ? DASH_BOTTOM_LED_NIGHT_BRIGHTNESS : DASH_BOTTOM_LED_DAY_BRIGHTNESS);
         fill_solid(dash_bottom_leds, DASH_BOTTOM_NUM_LEDS, color);
       }
       // fade in the charge strip and others
     }
     else if (stage == 2)
     {
-      unsigned long elapsedStageTime = millis() - endBrightnessStageStartTime;
+      unsigned long elapsedStageTime = now - endBrightnessStageStartTime;
 
       // Mobile Charging Station
       AnimationManager::fadeIn(elapsedStageTime, STAGE2_DURATION, charging_station_leds, NUM_LEDS, isNightMode ? MOBILE_CHRGR_LED_NIGHT_BRIGHTNESS : MOBILE_CHRGR_LED_DAY_BRIGHTNESS, currentTheme->chargingStationColor);
 
+      // Update common params
+      dpCommon.duration = STAGE2_DURATION;
+      dpCommon.elapsedTime = elapsedStageTime;
+
       // Circular Door Speaker
-      SharedAnimationParams dsParams = SharedAnimationParams(elapsedStageTime, STAGE2_DURATION, NUM_LEDS_DOOR_FL_SPEAKER, isNightMode ? DOOR_SPEAKER_NIGHT_BRIGHTNESS : DOOR_SPEAKER_DAY_BRIGHTNESS, currentTheme->doorSpeakerColor);
+      dpCommon.num_leds = NUM_LEDS_DOOR_FL_SPEAKER;
+      dpCommon.target_brightness = isNightMode ? DOOR_SPEAKER_NIGHT_BRIGHTNESS : DOOR_SPEAKER_DAY_BRIGHTNESS;
+      dpCommon.target_color = currentTheme->doorPocketColorV2;
       // Front Left
-      AnimationManager::fadeInSeq(door_fl_leds_speaker, dsParams);
+      AnimationManager::fadeInSeq(door_fl_leds_speaker, dpCommon);
       // Front Right
-      AnimationManager::fadeInSeq(door_fr_leds_speaker, dsParams);
+      AnimationManager::fadeInSeq(door_fr_leds_speaker, dpCommon);
 
       // Door Pocket
       // Front Left -> V2
-      SharedAnimationParams dpv2Params = SharedAnimationParams(elapsedStageTime, STAGE2_DURATION, NUM_LEDS_DOOR_FL_POCKET, isNightMode ? DOOR_POCKET_NIGHT_BRIGHTNESS : DOOR_POCKET_DAY_BRIGHTNESS, currentTheme->doorPocketColorV2);
-      AnimationManager::fadeInSeq(door_fl_leds_pocket, dpv2Params);
+      dpCommon.num_leds = NUM_LEDS_DOOR_FL_POCKET;
+      dpCommon.target_brightness = isNightMode ? DOOR_POCKET_NIGHT_BRIGHTNESS : DOOR_POCKET_DAY_BRIGHTNESS;
+      dpCommon.target_color = currentTheme->doorPocketColorV2;
+      AnimationManager::fadeInSeq(door_fl_leds_pocket, dpCommon);
       // Front Right -> V1
-      SharedAnimationParams dpv1Params = SharedAnimationParams(elapsedStageTime, STAGE2_DURATION, NUM_LEDS_DOOR_FR_POCKET, isNightMode ? DOOR_POCKET_NIGHT_BRIGHTNESS : DOOR_POCKET_DAY_BRIGHTNESS, currentTheme->doorPocketColor);
-      AnimationManager::fadeInSeq(door_fr_leds_pocket, dpv1Params);
+      dpCommon.num_leds = NUM_LEDS_DOOR_FR_POCKET;
+      dpCommon.target_color = currentTheme->doorPocketColor;
+      AnimationManager::fadeInSeq(door_fr_leds_pocket, dpCommon);
 
-      lastUpdateTime = millis();
+      lastUpdateTime = now;
 
       if (elapsedStageTime >= STAGE2_DURATION)
       {

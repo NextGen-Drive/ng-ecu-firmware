@@ -27,7 +27,9 @@ public:
 
     static void tick()
     {
-        currentAnimation->tickAnimation();
+        if (currentAnimation) {
+            currentAnimation->tickAnimation();
+        }
 
         FastLED.show();
     }

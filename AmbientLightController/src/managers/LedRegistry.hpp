@@ -89,7 +89,7 @@ private:
         regs[ledRegIndex] = LedRegistration(leds, length, type);
         ledRegIndex++;
 
-        Serial.println("Registered LED ID: " + String(ledRegIndex));
+        Log::println("Registered LED ID: " + String(ledRegIndex));
     }
 };
 

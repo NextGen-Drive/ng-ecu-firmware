@@ -21,6 +21,15 @@
 
 #define IS_DASH_LED_ENABLED false
 
+int availableMemory() {
+    // Use 1024 with ATmega168
+    int size = 2048;
+    byte *buf;
+    while ((buf = (byte *) malloc(--size)) == NULL);
+        free(buf);
+    return size;
+}
+
 void setup() { 
   Log::init();
   Log::println("Starting setup");
@@ -28,14 +37,17 @@ void setup() {
   LedRegistry::init();
   LedManager::init();
   I2CManager::init();
-
+  
   LedManager::currentAnimation = new StartupAnimation();
   LedManager::currentAnimation->startAnimation();
+
+  return;
 
   Log::println("Finished setup");
 }
 
 void loop() { 
+  return;
   LedManager::tick();
 
   I2CManager::tick();
