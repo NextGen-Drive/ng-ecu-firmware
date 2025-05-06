@@ -14,9 +14,9 @@ public:
 
     static void println(String msg)
     {
-        Serial.print("[");
+        Serial.print(F("["));
         Serial.print(millis());
-        Serial.print("] ");
+        Serial.print(F("] "));
         Serial.println(msg);
     }
 

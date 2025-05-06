@@ -8,7 +8,7 @@ class Animation {
   public:
     bool isCompleted = false;
 
-    virtual ~Animation(){
+    virtual ~Animation() {
 
     }
 

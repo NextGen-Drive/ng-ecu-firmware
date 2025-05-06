@@ -32,18 +32,18 @@ int availableMemory() {
 
 void setup() { 
   Log::init();
-  Log::println("Starting setup");
+  Log::println(F("Starting setup"));
 
   LedRegistry::init();
   LedManager::init();
   I2CManager::init();
+
+  //Log::println(String(availableMemory()));
   
   LedManager::currentAnimation = new StartupAnimation();
   LedManager::currentAnimation->startAnimation();
 
-  return;
-
-  Log::println("Finished setup");
+  Log::println(F("Finished setup"));
 }
 
 void loop() { 

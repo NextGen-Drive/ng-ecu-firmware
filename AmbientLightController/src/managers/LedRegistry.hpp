@@ -40,7 +40,7 @@ struct LedRegistration
 struct LedRegistry
 {
 public:
-    static LedRegistration regs[LED_REGS_LENGTH];
+    //static LedRegistration regs[LED_REGS_LENGTH];
 
     static CRGB charging_station_leds[NUM_LEDS];
     static CRGB door_fr_leds[NUM_LEDS_DOOR_FR];
@@ -82,16 +82,23 @@ public:
     }
 
 private:
-    static int ledRegIndex;
+    static uint16_t ledRegIndex;
 
     static void onRegister(CRGB *leds, uint64_t length, LedType type)
     {
-        regs[ledRegIndex] = LedRegistration(leds, length, type);
+        //regs[ledRegIndex] = LedRegistration(leds, length, type);
         ledRegIndex++;
 
         Log::println("Registered LED ID: " + String(ledRegIndex));
     }
 };
 
-LedRegistration LedRegistry::regs[LED_REGS_LENGTH] = {};
-int LedRegistry::ledRegIndex = 0;
+//LedRegistration LedRegistry::regs[LED_REGS_LENGTH] = {};
+CRGB LedRegistry::charging_station_leds[NUM_LEDS];
+CRGB LedRegistry::door_fr_leds[NUM_LEDS_DOOR_FR];
+CRGB LedRegistry::door_fr_leds_speaker[NUM_LEDS_DOOR_FR_SPEAKER];
+CRGB LedRegistry::door_fr_leds_pocket[NUM_LEDS_DOOR_FR_POCKET];
+CRGB LedRegistry::dash_bottom_leds[DASH_BOTTOM_NUM_LEDS];
+CRGB LedRegistry::door_fl_leds_speaker[NUM_LEDS_DOOR_FL_SPEAKER];
+CRGB LedRegistry::door_fl_leds_pocket[NUM_LEDS_DOOR_FL_POCKET];
+uint16_t LedRegistry::ledRegIndex = 0;
