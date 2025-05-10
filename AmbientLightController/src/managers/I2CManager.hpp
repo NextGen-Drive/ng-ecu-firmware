@@ -24,7 +24,9 @@ struct I2CManager
 public:
     static void init()
     {
+        Log::println("I2CManager: Initializing!");
         Wire.begin(); // Initialize I2C communication
+        Log::println("I2CManager: Initialized!");
     }
 
     static void tick()

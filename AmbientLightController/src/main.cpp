@@ -20,35 +20,40 @@
 #include "animations/StartupAnimation.hpp"
 
 #define IS_DASH_LED_ENABLED false
+#include <stdlib.h>
 
-int availableMemory() {
-    // Use 1024 with ATmega168
-    int size = 2048;
-    byte *buf;
-    while ((buf = (byte *) malloc(--size)) == NULL);
-        free(buf);
-    return size;
+extern char _end;
+extern "C" char* sbrk(int incr);
+
+int freeMemory() {
+  char top;
+  return &top - reinterpret_cast<char*>(sbrk(0));
 }
 
-void setup() { 
+void setup()
+{
   Log::init();
-  Log::println(F("Starting setup"));
+  Log::println("Starting setup");
+
+  pinMode(LED_BUILTIN, OUTPUT);
 
   LedRegistry::init();
   LedManager::init();
   I2CManager::init();
 
-  //Log::println(String(availableMemory()));
-  
   LedManager::currentAnimation = new StartupAnimation();
   LedManager::currentAnimation->startAnimation();
 
-  Log::println(F("Finished setup"));
+  Log::println("Finished setup");
 }
 
-void loop() { 
-  return;
-  LedManager::tick();
+static unsigned long lastBlink = 0;
+static bool ledState = false;
 
+void loop()
+{
+  Log::println("loop");
+
+  LedManager::tick();
   I2CManager::tick();
 }

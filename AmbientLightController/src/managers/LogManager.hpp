@@ -1,6 +1,5 @@
 #pragma once
 
-// Different naming convention for convinience
 /* 
 Interface for logging operations
  */
@@ -14,9 +13,9 @@ public:
 
     static void println(String msg)
     {
-        Serial.print(F("["));
+        Serial.print("[");
         Serial.print(millis());
-        Serial.print(F("] "));
+        Serial.print("] ");
         Serial.println(msg);
     }
 

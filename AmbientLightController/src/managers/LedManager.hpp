@@ -21,8 +21,12 @@ public:
 
     static void init()
     {
+        Log::println("LedManager: Initializing!");
+
         FastLED.clear();
         FastLED.setBrightness(255);
+        
+        Log::println("LedManager: Initialized!");
     }
 
     static void tick()

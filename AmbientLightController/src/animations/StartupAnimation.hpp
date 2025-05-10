@@ -13,14 +13,17 @@ private:
   {
     uint8_t stage : 2;
     bool isDone : 1;
-    int8_t currentLEDPos;
+    int16_t currentLEDPos;
     uint16_t endBrightnessStageStartTime; // 0‑65 535 ms (wrap every 65 s)
-  } state = {0, false, 0, 0};
+  } state;
 
 public:
   void startAnimation() override
   {
+    state.stage = 0;
+    state.isDone = false;
     state.currentLEDPos = DASH_BOTTOM_NUM_LEDS;
+    state.endBrightnessStageStartTime = 0;
     fill_solid(LedRegistry::dash_bottom_leds, DASH_BOTTOM_NUM_LEDS, CRGB::Black);
     fill_solid(LedRegistry::door_fl_leds_pocket, NUM_LEDS_DOOR_FL_POCKET, CRGB::Black);
     fill_solid(LedRegistry::door_fr_leds_pocket, NUM_LEDS_DOOR_FR_POCKET, CRGB::Black);
@@ -40,7 +43,7 @@ public:
     // Dot animation from left to right
     if (state.stage == 0 && now - lastUpdateTime >= 7)
     {
-      if (state.currentLEDPos != DASH_BOTTOM_NUM_LEDS)
+      if (state.currentLEDPos >= 0 && state.currentLEDPos < DASH_BOTTOM_NUM_LEDS - 1)
       {
         LedRegistry::dash_bottom_leds[state.currentLEDPos + 1] = CRGB::Black;
       }
@@ -50,6 +53,7 @@ public:
 
       if (state.currentLEDPos == -1)
       {
+        state.currentLEDPos = 0;
         state.stage++;
       }
     }
