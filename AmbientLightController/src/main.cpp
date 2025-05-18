@@ -10,6 +10,7 @@
 #include "themes/ITheme.hpp"
 #include "themes/ChillTheme.hpp"
 #include "themes/SportTheme.hpp"
+#include "themes/NeoWhiteTheme.hpp"
 
 #include "helper.hpp"
 
@@ -18,17 +19,9 @@
 #include "helper/AnimationHelper.hpp"
 
 #include "animations/StartupAnimation.hpp"
+#include "animations/DrivingLoopAnimation.hpp"
 
 #define IS_DASH_LED_ENABLED false
-#include <stdlib.h>
-
-extern char _end;
-extern "C" char* sbrk(int incr);
-
-int freeMemory() {
-  char top;
-  return &top - reinterpret_cast<char*>(sbrk(0));
-}
 
 void setup()
 {
@@ -37,9 +30,9 @@ void setup()
 
   pinMode(LED_BUILTIN, OUTPUT);
 
+  I2CManager::init();
   LedRegistry::init();
   LedManager::init();
-  I2CManager::init();
 
   LedManager::currentAnimation = new StartupAnimation();
   LedManager::currentAnimation->startAnimation();
@@ -47,12 +40,55 @@ void setup()
   Log::println("Finished setup");
 }
 
-static unsigned long lastBlink = 0;
-static bool ledState = false;
+unsigned long previousMillis = 0;
+int blinkStage = 0;
 
 void loop()
 {
-  Log::println("loop");
+  unsigned long currentMillis = millis();
+
+  switch (blinkStage)
+  {
+  case 0:
+    if (currentMillis - previousMillis >= 0)
+    {
+      digitalWrite(LED_BUILTIN, HIGH);
+      previousMillis = currentMillis;
+      blinkStage = 1;
+    }
+    break;
+  case 1:
+    if (currentMillis - previousMillis >= 100)
+    {
+      digitalWrite(LED_BUILTIN, LOW);
+      previousMillis = currentMillis;
+      blinkStage = 2;
+    }
+    break;
+  case 2:
+    if (currentMillis - previousMillis >= 100)
+    {
+      digitalWrite(LED_BUILTIN, HIGH);
+      previousMillis = currentMillis;
+      blinkStage = 3;
+    }
+    break;
+  case 3:
+    if (currentMillis - previousMillis >= 100)
+    {
+      digitalWrite(LED_BUILTIN, LOW);
+      previousMillis = currentMillis;
+      blinkStage = 4;
+    }
+    break;
+  case 4:
+    if (currentMillis - previousMillis >= 1000)
+    {
+      previousMillis = currentMillis;
+      blinkStage = 0;
+    }
+    break;
+  }
 
   LedManager::tick();
   I2CManager::tick();

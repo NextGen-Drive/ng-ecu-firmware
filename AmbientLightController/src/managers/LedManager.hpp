@@ -2,6 +2,7 @@
 
 #include <themes/ITheme.hpp>
 #include <themes/ChillTheme.hpp>
+#include <themes/NeoWhiteTheme.hpp>
 #include <animations/Animation.hpp>
 #include <FastLED.h>
 #include "LedRegistry.hpp"
@@ -40,5 +41,5 @@ public:
 };
 
 bool LedManager::IS_NIGHT_MODE = true;
-ITheme *LedManager::CurrentTheme = new ChillTheme();
+ITheme *LedManager::CurrentTheme = new NeoWhiteTheme();
 Animation *LedManager::currentAnimation = nullptr;

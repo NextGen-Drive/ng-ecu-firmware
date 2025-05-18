@@ -9,7 +9,8 @@
 const unsigned long REQ_TIMEOUT = 2000;
 const int8_t MAX_TIMEOUTS = 3;
 
-enum CommState {
+enum CommState
+{
     NONE,
     FREE,
     WAITING,
@@ -25,13 +26,14 @@ public:
     static void init()
     {
         Log::println("I2CManager: Initializing!");
-        Wire.begin(); // Initialize I2C communication
+        Wire.begin(8); // Initialize I2C communication
         Log::println("I2CManager: Initialized!");
     }
 
     static void tick()
     {
-        if (state == CommState::NONE || state == CommState::FREE) {
+        if (state == CommState::NONE || state == CommState::FREE)
+        {
             Wire.requestFrom(8, EXPECTED_COMM_BYTES);
             state = CommState::WAITING;
             lastReqTime = millis();
@@ -48,37 +50,22 @@ public:
 
             bool isNightMode = getBit(buffer, 0);
 
-            NightModeChangedEvent::handle(isNightMode);
+            LedManager::IS_NIGHT_MODE = isNightMode;
         }
 
         unsigned long timeSinceReq = millis() - lastReqTime;
-        if (state == CommState::WAITING && timeSinceReq > REQ_TIMEOUT) {
+        if (state == CommState::WAITING && timeSinceReq > REQ_TIMEOUT)
+        {
             timeouts++;
             state = CommState::FREE;
 
-            if (timeouts > MAX_TIMEOUTS) {
+            if (timeouts > MAX_TIMEOUTS)
+            {
                 state = CommState::TIMEOUT;
 
                 Log::error("I2CManager: DataController unreachable. I2C disabled for this session.");
             }
         }
-
-        /*while (Wire.available()) {
-          String c = Wire.readString();
-          Serial.println((char)Wire.read());
-
-          if (c == "NM_A") {
-            if (!currentAnimation->isCompleted) return;
-            IS_NIGHT_MODE = true;
-            currentAnimation = new NmModeTransitionAnimation();
-            currentAnimation->startAnimation();
-          } else if (c == "NM_D") {
-            if (!currentAnimation->isCompleted) return;
-            IS_NIGHT_MODE = false;
-            currentAnimation = new NmModeTransitionAnimation();
-            currentAnimation->startAnimation();
-          }
-        }*/
     }
 
 private:

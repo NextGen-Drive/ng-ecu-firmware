@@ -80,6 +80,7 @@ void setBit(byte &targetByte, int position, bool bitValue)
 
 void onRequest()
 {
+  Serial.println("Received request");
   byte data;
   /*
     MESSAGE SPECIFICATION
@@ -147,6 +148,7 @@ char **splitString(const char *inputString, int &numSubstrings)
 
 void setup()
 {
+  sleep(1);
   Wire.begin(8);
   Wire.onRequest(onRequest);
   DEBUG_PORT.begin(115200);
