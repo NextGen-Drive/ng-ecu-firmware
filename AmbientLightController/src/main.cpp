@@ -1,6 +1,17 @@
 #include <FastLED.h>
 
-#include "managers/LogManager.hpp"
+#include "LogManager.hpp"
+
+#include "EthernetManager.h"
+
+#ifdef CLIENT
+#include "ClientNetworkManager.h"
+#endif
+
+#ifdef SERVER
+#include "ServerManager.h"
+#endif
+
 #include "managers/I2CManager.hpp"
 #include "managers/LedManager.hpp"
 #include "managers/LedRegistry.hpp"
@@ -26,70 +37,41 @@
 void setup()
 {
   Log::init();
+  delay(1000);
   Log::println("Starting setup");
 
-  pinMode(LED_BUILTIN, OUTPUT);
+#ifdef CLIENT
+  EthernetManager::init(2);
+  ClientNetworkManager::init(2);
+#endif
 
-  I2CManager::init();
+#ifdef SERVER
+  EthernetManager::init(1);
+  ServerManager::init();
+#endif
+
+#ifdef LED
   LedRegistry::init();
   LedManager::init();
 
   LedManager::currentAnimation = new StartupAnimation();
   LedManager::currentAnimation->startAnimation();
+#endif
 
   Log::println("Finished setup");
 }
 
-unsigned long previousMillis = 0;
-int blinkStage = 0;
-
 void loop()
 {
-  unsigned long currentMillis = millis();
+#ifdef CLIENT
+  ClientNetworkManager::tick();
+#endif
 
-  switch (blinkStage)
-  {
-  case 0:
-    if (currentMillis - previousMillis >= 0)
-    {
-      digitalWrite(LED_BUILTIN, HIGH);
-      previousMillis = currentMillis;
-      blinkStage = 1;
-    }
-    break;
-  case 1:
-    if (currentMillis - previousMillis >= 100)
-    {
-      digitalWrite(LED_BUILTIN, LOW);
-      previousMillis = currentMillis;
-      blinkStage = 2;
-    }
-    break;
-  case 2:
-    if (currentMillis - previousMillis >= 100)
-    {
-      digitalWrite(LED_BUILTIN, HIGH);
-      previousMillis = currentMillis;
-      blinkStage = 3;
-    }
-    break;
-  case 3:
-    if (currentMillis - previousMillis >= 100)
-    {
-      digitalWrite(LED_BUILTIN, LOW);
-      previousMillis = currentMillis;
-      blinkStage = 4;
-    }
-    break;
-  case 4:
-    if (currentMillis - previousMillis >= 1000)
-    {
-      previousMillis = currentMillis;
-      blinkStage = 0;
-    }
-    break;
-  }
+#ifdef SERVER
+  ServerManager::tick();
+#endif
 
+#ifdef LED
   LedManager::tick();
-  I2CManager::tick();
+#endif
 }

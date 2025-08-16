@@ -1,6 +1,6 @@
 #pragma once
 
-/* 
+/*
 Interface for logging operations
  */
 struct Log
@@ -19,7 +19,7 @@ public:
         Serial.println(msg);
     }
 
-    static void error(String msg) 
+    static void error(String msg)
     {
         println("ERROR: " + msg);
     }

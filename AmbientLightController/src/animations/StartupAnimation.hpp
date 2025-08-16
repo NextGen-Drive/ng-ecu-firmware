@@ -1,7 +1,7 @@
 #pragma once
 
 #include "managers/LedManager.hpp"
-#include "managers/LogManager.hpp"
+#include "LogManager.hpp"
 #include "animations/DrivingLoopAnimation.hpp"
 
 constexpr uint16_t STAGE2_DURATION = 1000; // in ms

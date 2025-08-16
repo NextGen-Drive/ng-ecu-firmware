@@ -1,0 +1,1 @@
+Using the ESP32-S3-ETH is a bit tricky. After flashing the code, there's no serial output. In order to get output, you have to manually reset the board.
